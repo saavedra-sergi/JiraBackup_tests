@@ -1,1 +1,35 @@
+name: Jira Backup Job
 
+on:
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  run-backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar script de backup
+        env:
+          # Aquí mapeamos los secretos a variables de entorno que Python leerá
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: python scripts/backup_jira.py
+
+      - name: Guardar Backup como Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jira-export-${{ github.run_id }}
+          path: scripts/*.zip # Esto subirá cualquier zip que genere tu script
+          retention-days: 5
