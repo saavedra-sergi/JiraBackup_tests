@@ -3,15 +3,13 @@ import requests
 from requests.auth import HTTPBasicAuth
 import sys
 import time
-import zip
 
 def download_file(url, auth, headers, filename):
-    """Función para descargar el archivo .zip"""
+    """Descarga el archivo final al disco"""
     print(f"📥 Intentando descargar archivo desde: {url}")
     try:
         with requests.get(url, auth=auth, headers=headers, stream=True, timeout=60) as r:
             r.raise_for_status()
-            # Aseguramos que la carpeta scripts existe
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             with open(filename, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
@@ -23,13 +21,13 @@ def download_file(url, auth, headers, filename):
         return False
 
 def run_backup():
-    # 1. Credenciales
+    # 1. Configuración de credenciales
     url = os.getenv("JIRA_URL")
     user = os.getenv("JIRA_USER_EMAIL")
     token = os.getenv("JIRA_API_TOKEN")
 
     if not all([url, user, token]):
-        print("❌ Error: Faltan secretos (JIRA_URL, USER_EMAIL o TOKEN) en GitHub")
+        print("❌ Error: Faltan secretos en GitHub")
         sys.exit(1)
 
     auth = HTTPBasicAuth(user, token)
@@ -41,49 +39,33 @@ def run_backup():
         "User-Agent": "Mozilla/5.0"
     }
 
-    # 2. Definición de rutas (URLs)
+    # 2. Configuración del Backup (Paridad con el de tu jefe)
     endpoint_run = f"{base_url}/rest/backup/1/export/runbackup"
-
-    # 2. Definición de rutas y configuración del contenido del backup
-    endpoint_run = f"{base_url}/rest/backup/1/export/runbackup"
-    
-    # Este es el payload completo para paridad total con un export manual
     payload = {
-        "cbAttachments": "true",    # Incluye archivos adjuntos (documentos, fotos)
-        "exportToCloud": "true",    # Formato obligatorio para Jira Cloud
-        "cbAvatars": "true",        # Incluye los iconos de proyectos y usuarios
-        "cbCustomFields": "true",   # Incluye configuración de campos extra
-        "cbWorklogs": "true"        # Incluye el registro de horas de trabajo
+        "cbAttachments": "true",    # Incluye adjuntos
+        "exportToCloud": "true",    # Obligatorio para Cloud
+        "cbAvatars": "true",        # Incluye logos/iconos
+        "cbCustomFields": "true",   # Campos personalizados
+        "cbWorklogs": "true"        # Registro de horas
     }
 
-    print("🚀 Enviando petición con configuración completa (paridad con manual)...")
+    print("🚀 Iniciando proceso de backup profesional...")
 
-    # 3. INTENTO 1: Lanzar nuevo backup usando el payload
+    # 3. EJECUCIÓN
     try:
-        response = requests.post(
-            endpoint_run, 
-            json=payload,  # <--- Aquí es donde se usa la variable
-            auth=auth, 
-            headers=headers,
-            timeout=30
-        )
-
-    print("🚀 Iniciando proceso de backup...")
-
-    # 3. INTENTO 1: Lanzar nuevo backup
-    try:
-        response = requests.post(endpoint_run, json={"cbAttachments": "true", "exportToCloud": "true"}, auth=auth, headers=headers)
+        # Intento lanzar el backup
+        response = requests.post(endpoint_run, json=payload, auth=auth, headers=headers)
         
         if response.status_code == 200:
             task_id = response.json().get("taskId")
             print(f"✅ Nuevo backup solicitado. Task ID: {task_id}")
             
-            # Bucle de espera (Polling)
+            # Polling (Espera)
             status = "IN_PROGRESS"
             while status in ["IN_PROGRESS", "QUEUED"]:
-                print(f"⏳ Procesando... ({status}). Esperando 30s.")
+                print(f"⏳ Estado: {status}. Esperando 30s...")
                 time.sleep(30)
-                prog_resp = requests.get(f"{endpoint_progress}?taskId={task_id}", auth=auth, headers=headers)
+                prog_resp = requests.get(f"{base_url}/rest/backup/1/export/getProgress?taskId={task_id}", auth=auth, headers=headers)
                 prog_data = prog_resp.json()
                 status = prog_data.get("status")
                 
@@ -94,32 +76,20 @@ def run_backup():
                     return
 
         elif response.status_code == 403:
-            print("⚠️ Jira denegó el nuevo backup (límite de 24/48h).")
-            print("🔄 Plan C: Consultando estado del último backup ejecutado...")
-            
-            # Intentamos obtener el progreso general (sin taskId)
-            progress_url = f"{base_url}/rest/backup/1/export/getProgress"
-            last_resp = requests.get(progress_url, auth=auth, headers=headers)
-            print(f"📡 Respuesta de Progreso (Status {last_resp.status_code}): {last_resp.text}")
-
-            if last_resp.status_code == 200:
-                data = last_resp.json()
-                # Buscamos el ID del archivo en el campo 'result'
-                file_id = data.get("result")
-                
+            print("⚠️ Límite de 24h detectado. Saltando a descargar el último disponible...")
+            # Plan B: Descargar el último progreso registrado
+            progress_resp = requests.get(f"{base_url}/rest/backup/1/export/getProgress", auth=auth, headers=headers)
+            if progress_resp.status_code == 200:
+                file_id = progress_resp.json().get("result")
                 if file_id:
-                    print(f"📂 ¡Encontrado! ID de archivo: {file_id}")
+                    print(f"📂 Encontrado backup previo (ID: {file_id})")
                     download_url = f"{base_url}/plugins/servlet/export/download/?fileId={file_id}"
-                    if download_file(download_url, auth, headers, "scripts/jira_backup.zip"):
-                        print("✅ Finalizado con éxito usando el último backup disponible.")
-                        return
-                else:
-                    print("❌ El backup existe pero el archivo ya no está disponible para descarga (Atlassian los borra tras 4h-24h).")
+                    download_file(download_url, auth, headers, "scripts/jira_backup.zip")
+                    return
+            print("❌ No hay backups recientes disponibles para descargar.")
             
-            sys.exit(1)
-
     except Exception as e:
-        print(f"💥 Error inesperado: {e}")
+        print(f"💥 Error crítico: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
