@@ -25,7 +25,7 @@ jobs:
           JIRA_URL: ${{ secrets.JIRA_URL }}
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-        run: python scripts/backup_jira.py
+        run: python -u scripts/backup_jira.py
 
       - name: Guardar Backup como Artifact
         uses: actions/upload-artifact@v4
