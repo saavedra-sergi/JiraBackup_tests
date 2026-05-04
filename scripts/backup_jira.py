@@ -39,7 +39,7 @@ def run_backup():
             print("AVISO DE SEGURIDAD / LÍMITE DE JIRA")
             print("Jira ha denegado la petición (Error 403).")
             print("Causas probables:")
-            print("1. Ya se ejecutó un backup en las últimas 24 horas (límite de Atlassian).")
+            print("1. Ya se ejecutó un backup en las últimas 48 horas (límite de Jira).")
             print("2. Tu usuario ha perdido temporalmente los permisos de administrador.")
             print("Acción: Revisa el 'Backup Manager' en la web de Jira.")
             print("="*50 + "\n")
