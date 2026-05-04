@@ -40,11 +40,11 @@ def run_backup():
 
     endpoint_run = f"{base_url}/rest/backup/1/export/runbackup"
     payload = {
-        "cbAttachments": "true",
-        "exportToCloud": "true",
-        "cbAvatars": "true",
-        "cbCustomFields": "true",
-        "cbWorklogs": "true"
+        "cbAttachments": True,
+        "exportToCloud": True,
+        "cbAvatars": True,
+        "cbCustomFields": True,
+        "cbWorklogs": True
     }
 
     print("🚀 Iniciando proceso de backup profesional...")
