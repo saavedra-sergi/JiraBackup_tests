@@ -72,31 +72,27 @@ def run_backup():
 
         elif response.status_code == 403:
             print("⚠️ Jira denegó el nuevo backup (límite de 24/48h).")
-            print("🔄 Plan B: Buscando el último backup exitoso...")
+            print("🔄 Plan C: Consultando estado del último backup ejecutado...")
             
-            last_resp = requests.get(endpoint_last, auth=auth, headers=headers)
-            print(f"📡 Respuesta de LastSuccessful (Status {last_resp.status_code}): {last_resp.text}")
+            # Intentamos obtener el progreso general (sin taskId)
+            progress_url = f"{base_url}/rest/backup/1/export/getProgress"
+            last_resp = requests.get(progress_url, auth=auth, headers=headers)
+            print(f"📡 Respuesta de Progreso (Status {last_resp.status_code}): {last_resp.text}")
 
-            if last_resp.status_code == 200 and last_resp.text.strip():
-                # Limpiamos posibles comillas o espacios
-                content = last_resp.text.replace('"', '').strip()
+            if last_resp.status_code == 200:
+                data = last_resp.json()
+                # Buscamos el ID del archivo en el campo 'result'
+                file_id = data.get("result")
                 
-                # A veces Jira devuelve un JSON como {"fileName": "..."} o similar
-                # Intentamos parsear si es JSON, si no, lo tomamos como texto plano
-                try:
-                    data = last_resp.json()
-                    file_id = data.get("fileName") or data.get("result") or content
-                except:
-                    file_id = content
-
-                print(f"📂 ID de archivo detectado: {file_id}")
-                download_url = f"{base_url}/plugins/servlet/export/download/?fileId={file_id}"
-                
-                if download_file(download_url, auth, headers, "scripts/jira_backup.zip"):
-                    print("✅ Finalizado con éxito usando el backup previo.")
-                    return
+                if file_id:
+                    print(f"📂 ¡Encontrado! ID de archivo: {file_id}")
+                    download_url = f"{base_url}/plugins/servlet/export/download/?fileId={file_id}"
+                    if download_file(download_url, auth, headers, "scripts/jira_backup.zip"):
+                        print("✅ Finalizado con éxito usando el último backup disponible.")
+                        return
+                else:
+                    print("❌ El backup existe pero el archivo ya no está disponible para descarga (Atlassian los borra tras 4h-24h).")
             
-            print("❌ No se pudo localizar un ID de archivo válido en la respuesta.")
             sys.exit(1)
 
     except Exception as e:
