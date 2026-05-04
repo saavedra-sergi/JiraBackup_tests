@@ -3,6 +3,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import sys
 import time
+import zip
 
 def download_file(url, auth, headers, filename):
     """Función para descargar el archivo .zip"""
@@ -42,8 +43,30 @@ def run_backup():
 
     # 2. Definición de rutas (URLs)
     endpoint_run = f"{base_url}/rest/backup/1/export/runbackup"
-    endpoint_last = f"{base_url}/rest/backup/1/export/lastsuccessful"
-    endpoint_progress = f"{base_url}/rest/backup/1/export/getProgress"
+
+    # 2. Definición de rutas y configuración del contenido del backup
+    endpoint_run = f"{base_url}/rest/backup/1/export/runbackup"
+    
+    # Este es el payload completo para paridad total con un export manual
+    payload = {
+        "cbAttachments": "true",    # Incluye archivos adjuntos (documentos, fotos)
+        "exportToCloud": "true",    # Formato obligatorio para Jira Cloud
+        "cbAvatars": "true",        # Incluye los iconos de proyectos y usuarios
+        "cbCustomFields": "true",   # Incluye configuración de campos extra
+        "cbWorklogs": "true"        # Incluye el registro de horas de trabajo
+    }
+
+    print("🚀 Enviando petición con configuración completa (paridad con manual)...")
+
+    # 3. INTENTO 1: Lanzar nuevo backup usando el payload
+    try:
+        response = requests.post(
+            endpoint_run, 
+            json=payload,  # <--- Aquí es donde se usa la variable
+            auth=auth, 
+            headers=headers,
+            timeout=30
+        )
 
     print("🚀 Iniciando proceso de backup...")
 
