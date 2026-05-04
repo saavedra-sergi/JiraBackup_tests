@@ -6,7 +6,7 @@ import time
 
 def download_file(url, auth, headers, filename):
     """Descarga el archivo final al disco"""
-    print(f"📥 Intentando descargar archivo desde: {url}")
+    print(f"Intentando descargar archivo desde: {url}")
     try:
         with requests.get(url, auth=auth, headers=headers, stream=True, timeout=60) as r:
             r.raise_for_status()
@@ -14,10 +14,10 @@ def download_file(url, auth, headers, filename):
             with open(filename, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-        print(f"💾 Archivo guardado con éxito: {filename}")
+        print(f"Archivo guardado con éxito: {filename}")
         return True
     except Exception as e:
-        print(f"❌ Error durante la descarga: {e}")
+        print(f"Error durante la descarga: {e}")
         return False
 
 def run_backup():
@@ -27,7 +27,7 @@ def run_backup():
     token = os.getenv("JIRA_API_TOKEN")
 
     if not all([url, user, token]):
-        print("❌ Error: Faltan secretos en GitHub")
+        print("Error: Faltan secretos en GitHub")
         sys.exit(1)
 
     auth = HTTPBasicAuth(user, token)
@@ -49,7 +49,20 @@ def run_backup():
         "cbWorklogs": "true"        # Registro de horas
     }
 
-    print("🚀 Iniciando proceso de backup profesional...")
+    print("Iniciando proceso de backup...")
+    print(f"Conectando a: {endpoint_run}...") # <-- Nueva línea de estado
+
+    try:
+        # Añadimos un timeout para que no se quede colgado eternamente
+        response = requests.post(
+            endpoint_run, 
+            json=payload, 
+            auth=auth, 
+            headers=headers,
+            timeout=60 # Esperamos hasta 60s a que Jira responda
+        )
+        
+        print(f"Respuesta recibida (Status: {response.status_code})") # <-- Nueva línea
 
     # 3. EJECUCIÓN
     try:
@@ -58,12 +71,12 @@ def run_backup():
         
         if response.status_code == 200:
             task_id = response.json().get("taskId")
-            print(f"✅ Nuevo backup solicitado. Task ID: {task_id}")
+            print(f"Nuevo backup solicitado. Task ID: {task_id}")
             
             # Polling (Espera)
             status = "IN_PROGRESS"
             while status in ["IN_PROGRESS", "QUEUED"]:
-                print(f"⏳ Estado: {status}. Esperando 30s...")
+                print(f"Estado: {status}. Esperando 30s...")
                 time.sleep(30)
                 prog_resp = requests.get(f"{base_url}/rest/backup/1/export/getProgress?taskId={task_id}", auth=auth, headers=headers)
                 prog_data = prog_resp.json()
@@ -76,20 +89,20 @@ def run_backup():
                     return
 
         elif response.status_code == 403:
-            print("⚠️ Límite de 24h detectado. Saltando a descargar el último disponible...")
+            print("Límite de 24h detectado. Saltando a descargar el último disponible...")
             # Plan B: Descargar el último progreso registrado
             progress_resp = requests.get(f"{base_url}/rest/backup/1/export/getProgress", auth=auth, headers=headers)
             if progress_resp.status_code == 200:
                 file_id = progress_resp.json().get("result")
                 if file_id:
-                    print(f"📂 Encontrado backup previo (ID: {file_id})")
+                    print(f"Encontrado backup previo (ID: {file_id})")
                     download_url = f"{base_url}/plugins/servlet/export/download/?fileId={file_id}"
                     download_file(download_url, auth, headers, "scripts/jira_backup.zip")
                     return
-            print("❌ No hay backups recientes disponibles para descargar.")
+            print("No hay backups recientes disponibles para descargar.")
             
     except Exception as e:
-        print(f"💥 Error crítico: {e}")
+        print(f"Error crítico: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
