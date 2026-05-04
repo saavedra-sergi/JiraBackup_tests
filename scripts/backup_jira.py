@@ -71,21 +71,33 @@ def run_backup():
                     return
 
         elif response.status_code == 403:
-            print("⚠️ Jira denegó el nuevo backup (probablemente por el límite de 24/48h).")
-            print("🔄 Plan B: Buscando el último backup exitoso para no irnos con las manos vacías...")
+            print("⚠️ Jira denegó el nuevo backup (límite de 24/48h).")
+            print("🔄 Plan B: Buscando el último backup exitoso...")
             
             last_resp = requests.get(endpoint_last, auth=auth, headers=headers)
-            if last_resp.status_code == 200 and last_resp.text:
-                file_id = last_resp.text.strip('"')
-                print(f"📂 Encontrado backup previo: {file_id}")
+            print(f"📡 Respuesta de LastSuccessful (Status {last_resp.status_code}): {last_resp.text}")
+
+            if last_resp.status_code == 200 and last_resp.text.strip():
+                # Limpiamos posibles comillas o espacios
+                content = last_resp.text.replace('"', '').strip()
+                
+                # A veces Jira devuelve un JSON como {"fileName": "..."} o similar
+                # Intentamos parsear si es JSON, si no, lo tomamos como texto plano
+                try:
+                    data = last_resp.json()
+                    file_id = data.get("fileName") or data.get("result") or content
+                except:
+                    file_id = content
+
+                print(f"📂 ID de archivo detectado: {file_id}")
                 download_url = f"{base_url}/plugins/servlet/export/download/?fileId={file_id}"
+                
                 if download_file(download_url, auth, headers, "scripts/jira_backup.zip"):
                     print("✅ Finalizado con éxito usando el backup previo.")
-                else:
-                    sys.exit(1)
-            else:
-                print("❌ No se encontró ningún backup previo disponible.")
-                sys.exit(1)
+                    return
+            
+            print("❌ No se pudo localizar un ID de archivo válido en la respuesta.")
+            sys.exit(1)
 
     except Exception as e:
         print(f"💥 Error inesperado: {e}")
