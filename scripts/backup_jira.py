@@ -69,8 +69,7 @@ def run_backup():
                     d_url = f"{base_url}/plugins/servlet/export/download/?fileId={file_id}"
                     download_file(d_url, auth, headers, "scripts/jira_backup.zip")
                     return
-
-       elif response.status_code == 403:
+        elif response.status_code == 403:
             print("⚠️ Error 403: Acceso denegado.")
             # Esto nos dirá la razón real del bloqueo
             reason = response.headers.get('X-Seraph-LoginReason')
@@ -80,6 +79,7 @@ def run_backup():
             print(f"🔍 Motivo de Autenticación: {auth_status}")
             
             # El resto del Plan B...
+        
         else:
             print(f"Error de Jira: {response.text}")
 
