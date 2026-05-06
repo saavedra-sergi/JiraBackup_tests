@@ -5,7 +5,7 @@ import sys
 import time
 
 def download_file(url, auth, headers, filename):
-    print(f"📥 Intentando descargar archivo desde: {url}")
+    print(f"Intentando descargar archivo desde: {url}")
     try:
         with requests.get(url, auth=auth, headers=headers, stream=True, timeout=60) as r:
             r.raise_for_status()
@@ -13,10 +13,10 @@ def download_file(url, auth, headers, filename):
             with open(filename, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-        print(f"💾 Archivo guardado con éxito: {filename}")
+        print(f"Archivo guardado con éxito: {filename}")
         return True
     except Exception as e:
-        print(f"❌ Error durante la descarga: {e}")
+        print(f"Error durante la descarga: {e}")
         return False
 
 def run_backup():
@@ -26,7 +26,7 @@ def run_backup():
     token = os.getenv("JIRA_API_TOKEN")
 
     if not all([url, user, token]):
-        print("❌ Error: Faltan secretos en GitHub")
+        print("Error: Faltan secretos en GitHub")
         sys.exit(1)
 
     auth = HTTPBasicAuth(user, token)
@@ -44,17 +44,17 @@ def run_backup():
         "exportToCloud": True
     }
 
-    print("🚀 Iniciando proceso de backup profesional...")
+    print("Iniciando proceso de backup profesional...")
 
     # 2. Bloque Try/Except Robusto
     try:
-        print(f"📡 Conectando a Jira: {endpoint_run}")
+        print(f"Conectando a Jira: {endpoint_run}")
         response = requests.post(endpoint_run, json=payload, auth=auth, headers=headers, timeout=60)
-        print(f"📥 Respuesta recibida (Status: {response.status_code})")
+        print(f"Respuesta recibida (Status: {response.status_code})")
 
         if response.status_code == 200:
             task_id = response.json().get("taskId")
-            print(f"✅ Nuevo backup solicitado. Task ID: {task_id}")
+            print(f"Nuevo backup solicitado. Task ID: {task_id}")
             
             status = "IN_PROGRESS"
             while status in ["IN_PROGRESS", "QUEUED"]:
@@ -71,7 +71,7 @@ def run_backup():
                     return
 
         elif response.status_code == 403:
-            print("⚠️ Límite de 24h detectado. Intentando Plan B...")
+            print("Límite de 24h detectado. Intentando Plan B...")
             p_resp = requests.get(f"{base_url}/rest/backup/1/export/getProgress", auth=auth, headers=headers)
             if p_resp.status_code == 200:
                 f_id = p_resp.json().get("result")
@@ -79,12 +79,12 @@ def run_backup():
                     d_url = f"{base_url}/plugins/servlet/export/download/?fileId={f_id}"
                     download_file(d_url, auth, headers, "scripts/jira_backup.zip")
                     return
-            print("❌ No hay backups disponibles.")
+            print("No hay backups disponibles.")
         else:
-            print(f"🚫 Error de Jira: {response.text}")
+            print(f"Error de Jira: {response.text}")
 
     except Exception as e:
-        print(f"💥 Error crítico en el script: {str(e)}")
+        print(f"Error crítico en el script: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
