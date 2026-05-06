@@ -70,16 +70,16 @@ def run_backup():
                     download_file(d_url, auth, headers, "scripts/jira_backup.zip")
                     return
 
-        elif response.status_code == 403:
-            print("Límite de 24h detectado. Intentando Plan B...")
-            p_resp = requests.get(f"{base_url}/rest/backup/1/export/getProgress", auth=auth, headers=headers)
-            if p_resp.status_code == 200:
-                f_id = p_resp.json().get("result")
-                if f_id:
-                    d_url = f"{base_url}/plugins/servlet/export/download/?fileId={f_id}"
-                    download_file(d_url, auth, headers, "scripts/jira_backup.zip")
-                    return
-            print("No hay backups disponibles.")
+       elif response.status_code == 403:
+            print("⚠️ Error 403: Acceso denegado.")
+            # Esto nos dirá la razón real del bloqueo
+            reason = response.headers.get('X-Seraph-LoginReason')
+            auth_status = response.headers.get('X-Authentication-Denied-Reason')
+            
+            print(f"🔍 Motivo de Jira (Seraph): {reason}")
+            print(f"🔍 Motivo de Autenticación: {auth_status}")
+            
+            # El resto del Plan B...
         else:
             print(f"Error de Jira: {response.text}")
 
