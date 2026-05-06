@@ -38,7 +38,7 @@ def run_backup():
         "User-Agent": "Mozilla/5.0"
     }
 
-    endpoint_run = f"{base_url}/rest/obm/1.0/export/runbackup"
+    endpoint_run = f"{base_url}/rest/backup/1/export/runbackup"
     
     payload = {
         "cbAttachments": True,
