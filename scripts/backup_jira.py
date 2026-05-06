@@ -59,7 +59,7 @@ def run_backup():
             
             status = "IN_PROGRESS"
             while status in ["IN_PROGRESS", "QUEUED"]:
-                print(f"⏳ Estado: {status}. Esperando 30s...")
+                print(f"Estado: {status}. Esperando 30s...")
                 time.sleep(30)
                 prog_resp = requests.get(f"{base_url}/rest/backup/1/export/getProgress?taskId={task_id}", auth=auth, headers=headers)
                 prog_data = prog_resp.json()
@@ -71,13 +71,13 @@ def run_backup():
                     download_file(d_url, auth, headers, "scripts/jira_backup.zip")
                     return
         elif response.status_code == 403:
-            print("⚠️ Error 403: Acceso denegado.")
+            print("Error 403: Acceso denegado.")
             # Esto nos dirá la razón real del bloqueo
             reason = response.headers.get('X-Seraph-LoginReason')
             auth_status = response.headers.get('X-Authentication-Denied-Reason')
             
-            print(f"🔍 Motivo de Jira (Seraph): {reason}")
-            print(f"🔍 Motivo de Autenticación: {auth_status}")
+            print(f"Motivo de Jira (Seraph): {reason}")
+            print(f"Motivo de Autenticación: {auth_status}")
             
             # El resto del Plan B...
         
